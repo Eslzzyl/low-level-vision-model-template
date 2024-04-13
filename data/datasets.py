@@ -109,8 +109,8 @@ class TestsDataset(Dataset):
         img_gt = self.transform(img_gt)
 
         # adjust to same size
-        width = min(img_lq.shape[1], img_gt.shape[1]) // 8 * 8
-        height = min(img_lq.shape[2], img_gt.shape[2]) // 8 * 8
+        height = min(img_lq.shape[1], img_gt.shape[1]) // 8 * 8
+        width = min(img_lq.shape[2], img_gt.shape[2]) // 8 * 8
         img_lq = crop_resize(img_lq, height, width)
         img_gt = crop_resize(img_gt, height, width)
 
