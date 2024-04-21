@@ -32,11 +32,6 @@ model = ExampleModel().cuda()
 if opt.data_parallel:
     model = torch.nn.DataParallel(model)
 
-if opt.pretrained:
-    print("Loading pretrained model:", opt.pretrained)
-    model.load_state_dict(torch.load(opt.pretrained))
-    print("Model loaded.")
-
 optimizer = torch.optim.Adam(model.parameters(), lr=opt.lr)
 scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, opt.cosine_warmup_epochs, T_mult=2, eta_min=opt.lr_min)
 
@@ -44,10 +39,21 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, opt.
 ssim_loss = SSIM(win_size=11, win_sigma=1.5, data_range=1, size_average=True, channel=3)
 L1_loss = torch.nn.L1Loss()
 
+iteration = 0
+start_epoch = 0
+
+if opt.pretrained:
+    print("Loading pretrained model:", opt.pretrained)
+    checkpoint = torch.load(opt.pretrained)
+    model.load_state_dict(checkpoint['model'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    start_epoch = checkpoint['epoch'] + 1
+    iteration = checkpoint['iteration']
+    print("Model loaded.")
+
 # Training
 model.train()
-iteration = 0
-for epoch in range(opt.n_epochs):
+for epoch in range(start_epoch, opt.n_epochs):
     print(f"Epoch: {epoch + 1}")
     for i, (img_lq, img_gt) in enumerate(tqdm(train_loader)):
         iteration += 1
@@ -132,6 +138,11 @@ for epoch in range(opt.n_epochs):
     frame = torch.cat(img_list, dim=3)
     writer.add_images('Val/img', frame, epoch + 1)
 
-    torch.save(model.state_dict(), f"{opt.model_dir}/{opt.experiment}/model_{opt.experiment}_epoch{epoch}.pth")
+    torch.save({
+        'model': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'epoch': epoch,
+        'iteration': iteration,
+    }, f"{opt.model_dir}/{opt.experiment}/model_{opt.experiment}_epoch{epoch}.pth")
 
     model.train()
